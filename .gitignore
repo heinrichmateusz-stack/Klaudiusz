@@ -1,0 +1,7 @@
+# Dane finansowe (wyciągi, koszty zespołu, baza, raporty) NIE trafiają do gita,
+# dopóki repozytorium jest publiczne. Po zmianie repo na prywatne usuń linię "dane/".
+dane/
+dane-demo/
+__pycache__/
+*.pyc
+node_modules/

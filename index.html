@@ -224,9 +224,12 @@ code{background:var(--bg);padding:1px 5px;border-radius:4px}
     <div class="row">
       <button class="btn" onclick="exportJSON()">Eksportuj kopię (JSON)</button>
       <label class="btn" style="flex-direction:row;color:var(--text);cursor:pointer">Importuj kopię (JSON)<input type="file" accept=".json" class="hidden" onchange="importJSON(this)"></label>
+      <button class="btn" onclick="loadFromAgent()">Wczytaj z bazy agenta CFO</button>
       <button class="btn" onclick="loadDemo()">Wczytaj dane demo</button>
       <button class="btn danger" onclick="clearAll()">Usuń wszystkie dane</button>
     </div>
+    <p class="hint">„Wczytaj z bazy agenta CFO” pobiera <code>dane/wyniki/dashboard.json</code> (działa, gdy strona jest serwowana, np. <code>python -m http.server</code>);
+      przy otwarciu z dysku użyj „Importuj kopię (JSON)” i wskaż ten plik. Miesiące z wyciągami bankowymi pokazują faktyczne wpływy, wydatki i saldo.</p>
     <p class="hint">Dane zapisują się wyłącznie w tej przeglądarce (localStorage). Rób regularnie eksport kopii, żeby ich nie stracić.</p>
   </div>
 </section>
@@ -239,7 +242,7 @@ const LS_KEY = 'fin-dashboard-v1';
 const MONTHS = ['sty','lut','mar','kwi','maj','cze','lip','sie','wrz','paź','lis','gru'];
 const uid = () => Math.random().toString(36).slice(2, 10);
 const defaultState = () => ({
-  clients: [], entries: [], costs: [], imports: [],
+  clients: [], entries: [], costs: [], imports: [], actuals: {},
   settings: { openingBalance: 0, openingMonth: '', costMode: 'auto', manualCostRate: 0, taxRate: 0 }
 });
 let state = load();
@@ -351,6 +354,12 @@ function compute() {
     const taxOut = prev ? prev.tax : 0;
     r.inflow = inflow; r.outflow = r.cost + taxOut; r.taxOut = taxOut;
     r.opening = bal; bal += inflow - r.outflow; r.balance = bal;
+    const a = state.actuals && state.actuals[m];  // faktyczne dane z banku (eksport agenta CFO)
+    if (a) {
+      r.inflow = a.inflow; r.outflow = a.outflow; r.actual = true;
+      bal = a.balance != null ? a.balance : r.opening + a.inflow - a.outflow;
+      r.balance = bal;
+    }
   });
   return { months, byMonth, start, end };
 }
@@ -801,6 +810,15 @@ function importJSON(input) {
     input.value = '';
   };
   r.readAsText(file);
+}
+async function loadFromAgent() {
+  try {
+    const res = await fetch('dane/wyniki/dashboard.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error(res.status);
+    const s = await res.json();
+    const d = defaultState(); state = { ...d, ...s, settings: { ...d.settings, ...(s.settings || {}) } };
+    resetPeriod(); commit(); showTab('dash'); toast(`Wczytano dane agenta CFO (do ${s.generatedFor || '?'}).`);
+  } catch (e) { toast('Nie znaleziono dane/wyniki/dashboard.json — uruchom „python -m cfo przetworz” i otwórz stronę przez serwer.'); }
 }
 function clearAll() { if (!confirm('Na pewno usunąć wszystkie dane? Tej operacji nie da się cofnąć.')) return; state = defaultState(); resetPeriod(); commit(); }
 function resetPeriod() { $('#pFrom').value = ''; $('#pTo').value = ''; }

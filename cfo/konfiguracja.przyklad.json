@@ -1,0 +1,70 @@
+{
+  "_opis": "Skopiuj do dane/konfiguracja.json i uzupełnij. Kwoty netto w PLN. 'bank' i 'clockify' to fragmenty nazw, po których rozpoznajemy klienta (wielkość liter i polskie znaki bez znaczenia).",
+  "firma": {
+    "saldo_startowe": 0,
+    "vat_sprzedaz_proc": 23,
+    "podatek_dochodowy_proc": 19,
+    "docelowa_marza_proc": 30,
+    "godziny_etatu_miesiecznie": 160,
+    "wlasne_rachunki": ["przelew własny", "przelew wewnętrzny", "na rachunek oszczędnościowy"]
+  },
+  "klienci": [
+    {
+      "nazwa": "Alfa Sp. z o.o.",
+      "model": "godzinowy",
+      "stawka": 180,
+      "termin_platnosci_dni": 30,
+      "bank": ["alfa sp", "1234567890"],
+      "clockify": ["Alfa"]
+    },
+    {
+      "nazwa": "Gamma Tech",
+      "model": "ryczalt",
+      "ryczalt": 12000,
+      "pakiet_godzin": 70,
+      "od": "2026-01",
+      "do": "",
+      "termin_platnosci_dni": 14,
+      "vat_proc": 23,
+      "bank": ["gamma tech"],
+      "clockify": ["Gamma"]
+    }
+  ],
+  "zespol": [
+    { "osoba": "Anna Kowalska", "aliasy": ["Anna", "anna.kowalska@firma.pl"] }
+  ],
+  "kategorie": {
+    "Zespół":            { "rachunek_wynikow": true,  "vat": true,  "zespol": true },
+    "ZUS":               { "rachunek_wynikow": true,  "vat": false, "zespol": true },
+    "Biuro":             { "rachunek_wynikow": true,  "vat": true },
+    "Oprogramowanie":    { "rachunek_wynikow": true,  "vat": true },
+    "Księgowość":        { "rachunek_wynikow": true,  "vat": true },
+    "Marketing":         { "rachunek_wynikow": true,  "vat": true },
+    "Sprzęt":            { "rachunek_wynikow": true,  "vat": true },
+    "Opłaty bankowe":    { "rachunek_wynikow": true,  "vat": false },
+    "Inne":              { "rachunek_wynikow": true,  "vat": true },
+    "VAT":               { "rachunek_wynikow": false, "vat": false },
+    "Podatek dochodowy": { "rachunek_wynikow": false, "vat": false },
+    "Przelew własny":    { "rachunek_wynikow": false, "vat": false, "pomin_w_cashflow": true },
+    "Wypłata właściciela": { "rachunek_wynikow": false, "vat": false }
+  },
+  "reguly_kosztow": [
+    { "zawiera": "zus", "kategoria": "ZUS" },
+    { "zawiera": "zaklad ubezpieczen", "kategoria": "ZUS" },
+    { "zawiera": "vat-7", "kategoria": "VAT" },
+    { "zawiera": "jpk", "kategoria": "VAT" },
+    { "zawiera": "pit-", "kategoria": "Podatek dochodowy" },
+    { "zawiera": "cit-", "kategoria": "Podatek dochodowy" },
+    { "zawiera": "urzad skarbowy", "kategoria": "VAT" },
+    { "zawiera": "prowizja", "kategoria": "Opłaty bankowe" },
+    { "zawiera": "oplata za prowadzenie", "kategoria": "Opłaty bankowe" },
+    { "zawiera": "wynagrodzenie", "kategoria": "Zespół" },
+    { "zawiera": "faktura b2b", "kategoria": "Zespół" },
+    { "zawiera": "coworking", "kategoria": "Biuro" },
+    { "zawiera": "czynsz", "kategoria": "Biuro" },
+    { "zawiera": "google", "kategoria": "Oprogramowanie" },
+    { "zawiera": "atlassian", "kategoria": "Oprogramowanie" },
+    { "zawiera": "microsoft", "kategoria": "Oprogramowanie" },
+    { "zawiera": "biuro rachunkowe", "kategoria": "Księgowość" }
+  ]
+}
