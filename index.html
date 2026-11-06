@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard finansowy</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f5f6f8; --card:#ffffff; --text:#1c2230; --muted:#6b7385; --border:#e3e6ec;
+  --accent:#2f6fed; --accent-soft:#e7efff;
+  --pos:#1a9c5b; --neg:#d6455d; --warn:#c98a10;
+  --c1:#2f6fed; --c2:#22a6a0; --c3:#e08a2c; --c4:#8a5cf6; --c5:#d6455d; --c6:#5a8f29;
+  --grid:#eceef2;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11141a; --card:#1a1e26; --text:#e6e9ef; --muted:#9aa3b5; --border:#2a303c;
+    --accent:#6b9bff; --accent-soft:#1f2b45;
+    --pos:#3cc985; --neg:#ff6b81; --warn:#f0b43c;
+    --c1:#6b9bff; --c2:#3cc7c0; --c3:#f0a050; --c4:#a98bff; --c5:#ff6b81; --c6:#8cc152;
+    --grid:#262b36;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11141a; --card:#1a1e26; --text:#e6e9ef; --muted:#9aa3b5; --border:#2a303c;
+  --accent:#6b9bff; --accent-soft:#1f2b45;
+  --pos:#3cc985; --neg:#ff6b81; --warn:#f0b43c;
+  --c1:#6b9bff; --c2:#3cc7c0; --c3:#f0a050; --c4:#a98bff; --c5:#ff6b81; --c6:#8cc152;
+  --grid:#262b36;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5}
+.wrap{max-width:1240px;margin:0 auto;padding:0 16px}
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:12px 0}
+.top h1{font-size:18px;margin:0;font-weight:650}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{background:none;border:0;padding:8px 12px;border-radius:8px;color:var(--muted);font:inherit;cursor:pointer}
+nav button.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.spacer{flex:1}
+main{padding:20px 0 60px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px}
+.card h2{font-size:15px;margin:0 0 12px;font-weight:650}
+.card h2 small{font-weight:400;color:var(--muted);margin-left:6px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px}
+.kpi .l{color:var(--muted);font-size:12px}
+.kpi .v{font-size:22px;font-weight:650;margin-top:4px;font-variant-numeric:tabular-nums}
+.kpi .s{color:var(--muted);font-size:12px;margin-top:2px}
+.pos{color:var(--pos)} .neg{color:var(--neg)} .warn{color:var(--warn)} .muted{color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+th{color:var(--muted);font-weight:500;font-size:12px}
+td.n,th.n{text-align:right}
+.tscroll{overflow-x:auto}
+.bar{height:6px;background:var(--grid);border-radius:3px;min-width:80px;position:relative}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+form.row,.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+input,select{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 9px;min-width:0}
+input[type=number]{width:120px}
+button.btn{font:inherit;border:1px solid var(--border);background:var(--card);color:var(--text);padding:7px 12px;border-radius:8px;cursor:pointer}
+button.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.btn.danger{color:var(--neg)}
+button.link{background:none;border:0;color:var(--accent);cursor:pointer;font:inherit;padding:0 4px}
+button.link.danger{color:var(--neg)}
+.chart{position:relative;height:300px}
+.insights{list-style:none;margin:0;padding:0}
+.insights li{padding:8px 10px;border-radius:8px;margin-bottom:6px;background:var(--bg);display:flex;gap:8px}
+.insights li b.i{flex:none}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;background:var(--accent-soft);color:var(--accent)}
+.tag.r{background:color-mix(in srgb,var(--c3) 18%,transparent);color:var(--c3)}
+.hint{color:var(--muted);font-size:12px;margin:8px 0 0}
+code{background:var(--bg);padding:1px 5px;border-radius:4px}
+.empty{text-align:center;padding:40px 16px;color:var(--muted)}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20;max-width:90vw}
+#toast.show{opacity:1}
+.hidden{display:none!important}
+.future{color:var(--muted);font-style:italic}
+@media (max-width:640px){ .g2{grid-template-columns:1fr} .kpi .v{font-size:19px} }
+</style>
+</head>
+<body>
+<header><div class="wrap top">
+  <h1>💼 Dashboard finansowy</h1>
+  <nav id="nav">
+    <button data-tab="dash" class="active">Dashboard</button>
+    <button data-tab="hours">Godziny</button>
+    <button data-tab="clients">Klienci</button>
+    <button data-tab="costs">Koszty</button>
+    <button data-tab="settings">Ustawienia</button>
+  </nav>
+  <div class="spacer"></div>
+  <div class="row" id="periodBox">
+    <label>Od<input type="month" id="pFrom"></label>
+    <label>Do<input type="month" id="pTo"></label>
+  </div>
+</div></header>
+
+<main class="wrap">
+<!-- DASHBOARD -->
+<section id="tab-dash">
+  <div id="dashEmpty" class="card empty hidden">
+    <p>Brak danych. Dodaj klientów, wgraj godziny i koszty — albo zobacz, jak to działa na przykładowych danych.</p>
+    <button class="btn primary" onclick="loadDemo()">Wczytaj dane demo</button>
+  </div>
+  <div id="dashBody">
+    <div class="kpis" id="kpis"></div>
+    <div class="grid g2">
+      <div class="card"><h2>Przychody, koszty i zysk <small>wg miesiąca wykonania pracy</small></h2><div class="chart"><canvas id="chPnl"></canvas></div></div>
+      <div class="card"><h2>Cashflow <small>wpływy, wydatki i saldo gotówki</small></h2><div class="chart"><canvas id="chCash"></canvas></div></div>
+    </div>
+    <div class="card"><h2>Wnioski</h2><ul class="insights" id="insights"></ul></div>
+    <div class="card"><h2>Rentowność klientów <small>koszt przypisany wg przepracowanych godzin</small></h2><div class="tscroll" id="clientProfit"></div></div>
+    <div class="card"><h2>Ryczałty — wykorzystanie pakietów godzin</h2><div class="tscroll" id="retainers"></div></div>
+    <div class="card"><h2>Zestawienie miesięczne</h2><div class="tscroll" id="monthly"></div>
+      <p class="hint">Miesiące oznaczone kursywą to prognoza (ryczałty, koszty stałe i spływ należności z przeszłych faktur).</p></div>
+  </div>
+</section>
+
+<!-- HOURS -->
+<section id="tab-hours" class="hidden">
+  <div class="card">
+    <h2>Import godzin z pliku CSV</h2>
+    <div class="row">
+      <label>Plik CSV<input type="file" id="csvFile" accept=".csv,.txt,text/csv"></label>
+      <label>Przypisz do klienta<select id="csvClient"></select></label>
+      <button class="btn primary" onclick="importCSV()">Importuj</button>
+    </div>
+    <p class="hint">Rozpoznawane kolumny (nagłówki PL lub EN): <code>data</code>, <code>klient</code>, <code>godziny</code> (np. <code>1,5</code> lub <code>1:30</code>), opcjonalnie <code>osoba</code>, <code>opis</code>.
+      Separator <code>;</code>, <code>,</code> lub tab. Działa też z eksportami Toggl/Clockify (<code>Client</code>, <code>Start date</code>, <code>Duration</code>).
+      Gdy plik pochodzi od jednego klienta i nie ma kolumny „klient”, wybierz klienta powyżej. Nieznani klienci zostaną dodani jako godzinowi — uzupełnij im stawkę.</p>
+    <div id="importHistory"></div>
+  </div>
+  <div class="card">
+    <h2>Dodaj wpis ręcznie</h2>
+    <form class="row" id="entryForm">
+      <label>Data<input type="date" name="date" required></label>
+      <label>Klient<select name="clientId" required></select></label>
+      <label>Osoba<input name="person" placeholder="np. Anna"></label>
+      <label>Godziny<input type="number" name="hours" step="0.25" min="0" required></label>
+      <label style="flex:1;min-width:160px">Opis<input name="desc"></label>
+      <button class="btn primary">Dodaj</button>
+    </form>
+  </div>
+  <div class="card">
+    <h2>Wpisy czasu pracy <small id="entryCount"></small></h2>
+    <div class="row" style="margin-bottom:10px">
+      <label>Miesiąc<select id="fMonth"></select></label>
+      <label>Klient<select id="fClient"></select></label>
+    </div>
+    <div class="tscroll" id="entries"></div>
+  </div>
+</section>
+
+<!-- CLIENTS -->
+<section id="tab-clients" class="hidden">
+  <div class="card">
+    <h2 id="clientFormTitle">Dodaj klienta</h2>
+    <form class="row" id="clientForm">
+      <input type="hidden" name="id">
+      <label style="min-width:200px">Nazwa<input name="name" required></label>
+      <label>Model rozliczenia<select name="type"><option value="hourly">Stawka godzinowa</option><option value="retainer">Ryczałt miesięczny</option></select></label>
+      <label class="f-hourly">Stawka netto / h<input type="number" name="rate" step="1" min="0"></label>
+      <label class="f-retainer">Ryczałt netto / mies.<input type="number" name="fee" step="1" min="0"></label>
+      <label class="f-retainer">Godzin w pakiecie / mies.<input type="number" name="includedHours" step="1" min="0"></label>
+      <label class="f-retainer">Ryczałt od<input type="month" name="startMonth"></label>
+      <label class="f-retainer">Ryczałt do (opcjonalnie)<input type="month" name="endMonth"></label>
+      <label>Termin płatności (dni)<input type="number" name="paymentDays" step="1" min="0" value="14"></label>
+      <button class="btn primary">Zapisz</button>
+      <button type="button" class="btn" onclick="resetClientForm()">Anuluj</button>
+    </form>
+    <p class="hint">Faktura wystawiana jest na koniec miesiąca, w którym wykonano pracę. Termin płatności przesuwa wpływ gotówki: 1–30 dni → kolejny miesiąc, 31–60 dni → za dwa miesiące itd.</p>
+  </div>
+  <div class="card"><h2>Klienci</h2><div class="tscroll" id="clients"></div></div>
+</section>
+
+<!-- COSTS -->
+<section id="tab-costs" class="hidden">
+  <div class="card">
+    <h2 id="costFormTitle">Dodaj koszt</h2>
+    <form class="row" id="costForm">
+      <input type="hidden" name="id">
+      <label style="min-width:200px">Nazwa<input name="name" required></label>
+      <label>Kategoria<select name="category">
+        <option>Wynagrodzenia</option><option>Podwykonawcy</option><option>ZUS i podatki</option><option>Biuro</option>
+        <option>Oprogramowanie</option><option>Księgowość</option><option>Marketing</option><option>Sprzęt</option><option>Inne</option>
+      </select></label>
+      <label>Rodzaj<select name="type"><option value="recurring">Stały miesięczny</option><option value="once">Jednorazowy</option></select></label>
+      <label>Kwota netto<input type="number" name="amount" step="0.01" min="0" required></label>
+      <label class="f-rec">Od miesiąca<input type="month" name="startMonth"></label>
+      <label class="f-rec">Do miesiąca (opcjonalnie)<input type="month" name="endMonth"></label>
+      <label class="f-once">Miesiąc<input type="month" name="month"></label>
+      <button class="btn primary">Zapisz</button>
+      <button type="button" class="btn" onclick="resetCostForm()">Anuluj</button>
+    </form>
+  </div>
+  <div class="card"><h2>Koszty <small id="costSum"></small></h2><div class="tscroll" id="costs"></div></div>
+</section>
+
+<!-- SETTINGS -->
+<section id="tab-settings" class="hidden">
+  <div class="card">
+    <h2>Parametry</h2>
+    <form class="row" id="settingsForm">
+      <label>Saldo gotówki na start<input type="number" name="openingBalance" step="0.01"></label>
+      <label>Miesiąc startowy salda<input type="month" name="openingMonth"></label>
+      <label>Koszt godziny pracy<select name="costMode">
+        <option value="auto">Automatycznie (koszty / godziny w miesiącu)</option>
+        <option value="manual">Stała stawka wewnętrzna</option></select></label>
+      <label>Stawka wewnętrzna / h<input type="number" name="manualCostRate" step="1" min="0"></label>
+      <label>Podatek dochodowy %<input type="number" name="taxRate" step="0.1" min="0" max="100"></label>
+      <button class="btn primary">Zapisz</button>
+    </form>
+    <p class="hint">Saldo startowe to stan konta na początku miesiąca startowego (domyślnie: najwcześniejszy miesiąc z danymi).
+      Koszt godziny służy do przypisania kosztów firmy do klientów — tryb automatyczny rozkłada wszystkie koszty miesiąca proporcjonalnie do godzin.
+      Podatek liczony jest od dodatniego zysku miesiąca i płacony w kolejnym miesiącu. Wszystkie kwoty netto (bez VAT).</p>
+  </div>
+  <div class="card">
+    <h2>Dane</h2>
+    <div class="row">
+      <button class="btn" onclick="exportJSON()">Eksportuj kopię (JSON)</button>
+      <label class="btn" style="flex-direction:row;color:var(--text);cursor:pointer">Importuj kopię (JSON)<input type="file" accept=".json" class="hidden" onchange="importJSON(this)"></label>
+      <button class="btn" onclick="loadDemo()">Wczytaj dane demo</button>
+      <button class="btn danger" onclick="clearAll()">Usuń wszystkie dane</button>
+    </div>
+    <p class="hint">Dane zapisują się wyłącznie w tej przeglądarce (localStorage). Rób regularnie eksport kopii, żeby ich nie stracić.</p>
+  </div>
+</section>
+</main>
+<div id="toast"></div>
+
+<script>
+/* ===================== Stan i zapis ===================== */
+const LS_KEY = 'fin-dashboard-v1';
+const MONTHS = ['sty','lut','mar','kwi','maj','cze','lip','sie','wrz','paź','lis','gru'];
+const uid = () => Math.random().toString(36).slice(2, 10);
+const defaultState = () => ({
+  clients: [], entries: [], costs: [], imports: [],
+  settings: { openingBalance: 0, openingMonth: '', costMode: 'auto', manualCostRate: 0, taxRate: 0 }
+});
+let state = load();
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(LS_KEY));
+    if (s && Array.isArray(s.clients)) {
+      const d = defaultState();
+      return { ...d, ...s, settings: { ...d.settings, ...(s.settings || {}) } };
+    }
+  } catch (e) {}
+  return defaultState();
+}
+function save() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+  catch (e) { toast('Nie udało się zapisać danych w przeglądarce — zrób eksport kopii.'); }
+}
+function commit() { save(); renderAll(); }
+
+/* ===================== Pomocnicze ===================== */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $ = s => document.querySelector(s);
+const curMonth = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); };
+function addMonths(m, n) {
+  let [y, mo] = m.split('-').map(Number); mo += n;
+  y += Math.floor((mo - 1) / 12); mo = ((mo - 1) % 12 + 12) % 12 + 1;
+  return y + '-' + String(mo).padStart(2, '0');
+}
+function monthRange(a, b) { const r = []; for (let m = a; m <= b && r.length < 300; m = addMonths(m, 1)) r.push(m); return r; }
+const fmtMonth = m => MONTHS[+m.slice(5) - 1] + ' ' + m.slice(0, 4);
+const fmtMonthShort = m => MONTHS[+m.slice(5) - 1] + " '" + m.slice(2, 4);
+const nf0 = new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 0 });
+const nf1 = new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 1 });
+const money = v => nf0.format(Math.round(v || 0)) + ' zł';
+const hrs = v => nf1.format(v || 0) + ' h';
+const pct = v => isFinite(v) ? nf1.format(v * 100) + '%' : '—';
+const cls = v => v < 0 ? 'neg' : 'pos';
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 3500); }
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const clientById = id => state.clients.find(c => c.id === id);
+const payOffset = c => { const d = +c.paymentDays || 0; return d <= 0 ? 0 : Math.ceil(d / 30); };
+const retainerActive = (c, m) => c.type === 'retainer' && (!c.startMonth || c.startMonth <= m) && (!c.endMonth || m <= c.endMonth);
+function costInMonth(k, m) {
+  if (k.type === 'once') return k.month === m ? +k.amount || 0 : 0;
+  return (!k.startMonth || k.startMonth <= m) && (!k.endMonth || m <= k.endMonth) ? +k.amount || 0 : 0;
+}
+
+/* ===================== Model finansowy ===================== */
+function dataBounds() {
+  const ms = [];
+  state.entries.forEach(e => ms.push(e.date.slice(0, 7)));
+  state.clients.forEach(c => { if (c.type === 'retainer' && c.startMonth) ms.push(c.startMonth); });
+  state.costs.forEach(k => { const m = k.type === 'once' ? k.month : k.startMonth; if (m) ms.push(m); });
+  if (!ms.length) return null;
+  ms.sort();
+  return { min: ms[0], max: ms[ms.length - 1] };
+}
+
+function compute() {
+  const s = state.settings;
+  const b = dataBounds();
+  if (!b) return null;
+  const start = s.openingMonth || b.min;
+  const lastActual = b.max > curMonth() ? b.max : curMonth();
+  const maxOffset = Math.max(0, ...state.clients.map(payOffset));
+  const end = addMonths(lastActual, Math.max(3, maxOffset));
+  const months = monthRange(start, end);
+
+  const hoursBy = {};
+  state.entries.forEach(e => {
+    const m = e.date.slice(0, 7);
+    (hoursBy[m] ||= {})[e.clientId] = ((hoursBy[m] || {})[e.clientId] || 0) + (+e.hours || 0);
+  });
+
+  const byMonth = {};
+  months.forEach(m => {
+    const clients = {};
+    let revHourly = 0, revRetainer = 0, hours = 0;
+    state.clients.forEach(c => {
+      const h = (hoursBy[m] && hoursBy[m][c.id]) || 0;
+      let rev = 0;
+      if (c.type === 'hourly') { rev = h * (+c.rate || 0); revHourly += rev; }
+      else if (retainerActive(c, m)) { rev = +c.fee || 0; revRetainer += rev; }
+      hours += h;
+      clients[c.id] = { hours: h, rev, active: c.type === 'hourly' ? h > 0 : retainerActive(c, m) };
+    });
+    let cost = 0; const costByCat = {};
+    state.costs.forEach(k => { const v = costInMonth(k, m); if (v) { cost += v; costByCat[k.category] = (costByCat[k.category] || 0) + v; } });
+    const costRate = s.costMode === 'manual' ? (+s.manualCostRate || 0) : (hours > 0 ? cost / hours : 0);
+    let allocated = 0;
+    state.clients.forEach(c => { clients[c.id].cost = clients[c.id].hours * costRate; allocated += clients[c.id].cost; });
+    const revenue = revHourly + revRetainer;
+    const profit = revenue - cost;
+    const tax = Math.max(0, profit) * (+s.taxRate || 0) / 100;
+    byMonth[m] = { m, clients, revHourly, revRetainer, revenue, hours, cost, costByCat, costRate, allocated,
+                   profit, tax, net: profit - tax, future: m > curMonth() };
+  });
+
+  // Cashflow: faktura na koniec miesiąca pracy, wpływ po terminie płatności, podatek płacony w kolejnym miesiącu
+  let bal = +s.openingBalance || 0;
+  months.forEach(m => {
+    const r = byMonth[m];
+    let inflow = 0;
+    state.clients.forEach(c => {
+      const src = byMonth[addMonths(m, -payOffset(c))];
+      if (src) inflow += src.clients[c.id].rev;
+    });
+    const prev = byMonth[addMonths(m, -1)];
+    const taxOut = prev ? prev.tax : 0;
+    r.inflow = inflow; r.outflow = r.cost + taxOut; r.taxOut = taxOut;
+    r.opening = bal; bal += inflow - r.outflow; r.balance = bal;
+  });
+  return { months, byMonth, start, end };
+}
+
+function receivablesAt(model, m) {
+  // zafakturowane do końca m, opłacane po m
+  let sum = 0;
+  state.clients.forEach(c => {
+    const off = payOffset(c);
+    for (let i = 0; i < off; i++) { const r = model.byMonth[addMonths(m, -i)]; if (r) sum += r.clients[c.id].rev; }
+  });
+  return sum;
+}
+
+/* ===================== Okres ===================== */
+function ensurePeriod(model) {
+  const f = $('#pFrom'), t = $('#pTo');
+  if (!model) return;
+  if (!t.value) t.value = curMonth() < model.end ? curMonth() : model.end;
+  if (!f.value) { const a = addMonths(t.value, -5); f.value = a < model.start ? model.start : a; }
+}
+$('#pFrom').addEventListener('change', renderDash);
+$('#pTo').addEventListener('change', renderDash);
+
+/* ===================== Dashboard ===================== */
+const charts = {};
+function renderDash() {
+  const model = compute();
+  const empty = !model || (!state.entries.length && !state.clients.length);
+  $('#dashEmpty').classList.toggle('hidden', !empty);
+  $('#dashBody').classList.toggle('hidden', empty);
+  if (empty) return;
+  ensurePeriod(model);
+  let from = $('#pFrom').value, to = $('#pTo').value;
+  if (from > to) [from, to] = [to, from];
+  const sel = model.months.filter(m => m >= from && m <= to);
+  const rows = sel.map(m => model.byMonth[m]);
+  const sum = k => rows.reduce((a, r) => a + r[k], 0);
+
+  const revenue = sum('revenue'), cost = sum('cost'), profit = sum('profit'), net = sum('net'), hours = sum('hours');
+  const inflow = sum('inflow'), outflow = sum('outflow');
+  const last = rows[rows.length - 1];
+  const recv = last ? receivablesAt(model, last.m) : 0;
+  const avgCostRate = hours > 0 ? (state.settings.costMode === 'manual' ? +state.settings.manualCostRate : cost / hours) : 0;
+  const nMonths = rows.length || 1;
+
+  $('#kpis').innerHTML = [
+    kpi('Przychód', money(revenue), `godzinowi ${money(sum('revHourly'))} · ryczałty ${money(sum('revRetainer'))}`),
+    kpi('Koszty', money(cost), `średnio ${money(cost / nMonths)} / mies.`),
+    kpi('Zysk operacyjny', money(profit), state.settings.taxRate ? `po podatku ${money(net)}` : 'przed podatkiem', cls(profit)),
+    kpi('Marża', pct(revenue ? profit / revenue : NaN), 'zysk / przychód', cls(profit)),
+    kpi('Przepracowane godziny', hrs(hours), `${hrs(hours / nMonths)} / mies.`),
+    kpi('Śr. przychód na godzinę', hours ? money(revenue / hours) : '—', `koszt godziny ${avgCostRate ? money(avgCostRate) : '—'}`),
+    kpi('Cashflow netto', money(inflow - outflow), `wpływy ${money(inflow)} · wydatki ${money(outflow)}`, cls(inflow - outflow)),
+    kpi('Saldo na koniec okresu', money(last ? last.balance : 0), `należności w drodze ${money(recv)}`, cls(last ? last.balance : 0)),
+  ].join('');
+
+  drawCharts(model, sel);
+  renderClientProfit(rows, avgCostRate);
+  renderRetainers(rows);
+  renderMonthly(model, sel);
+  renderInsights(model, rows, { revenue, cost, profit, hours, avgCostRate, recv, last, to });
+}
+const kpi = (l, v, s, c = '') => `<div class="kpi"><div class="l">${l}</div><div class="v ${c}">${v}</div><div class="s">${s}</div></div>`;
+
+function drawCharts(model, sel) {
+  const labels = sel.map(fmtMonthShort);
+  const r = sel.map(m => model.byMonth[m]);
+  const grid = cssVar('--grid'), muted = cssVar('--muted');
+  const scales = (stacked) => ({
+    x: { stacked, grid: { display: false } },
+    y: { stacked, grid: { color: grid }, ticks: { callback: v => nf0.format(v) } }
+  });
+  const tooltip = { callbacks: { label: c => `${c.dataset.label}: ${money(c.parsed.y)}` } };
+  Object.values(charts).forEach(c => c.destroy());
+  if (typeof Chart === 'undefined') {
+    document.querySelectorAll('.chart').forEach(el => el.innerHTML = '<p class="muted">Nie udało się wczytać biblioteki wykresów (brak internetu?). Tabele poniżej działają normalnie.</p>');
+    return;
+  }
+  Chart.defaults.color = muted;
+  Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+
+  charts.pnl = new Chart($('#chPnl'), {
+    data: { labels, datasets: [
+      { type: 'bar', label: 'Godzinowi', data: r.map(x => x.revHourly), backgroundColor: cssVar('--c1'), stack: 'rev', borderRadius: 3, order: 2 },
+      { type: 'bar', label: 'Ryczałty', data: r.map(x => x.revRetainer), backgroundColor: cssVar('--c3'), stack: 'rev', borderRadius: 3, order: 2 },
+      { type: 'line', label: 'Koszty', data: r.map(x => x.cost), borderColor: cssVar('--neg'), backgroundColor: cssVar('--neg'), tension: .25, pointRadius: 3, order: 1, stack: 'cost' },
+      { type: 'line', label: 'Zysk', data: r.map(x => x.profit), borderColor: cssVar('--pos'), backgroundColor: cssVar('--pos'), borderDash: [5, 4], tension: .25, pointRadius: 3, order: 0, stack: 'profit' },
+    ] },
+    options: { maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { tooltip, legend: { position: 'bottom' } }, scales: scales(true) }
+  });
+
+  charts.cash = new Chart($('#chCash'), {
+    data: { labels, datasets: [
+      { type: 'bar', label: 'Wpływy', data: r.map(x => x.inflow), backgroundColor: cssVar('--c2'), borderRadius: 3, order: 2 },
+      { type: 'bar', label: 'Wydatki', data: r.map(x => -x.outflow), backgroundColor: cssVar('--c5'), borderRadius: 3, order: 2 },
+      { type: 'line', label: 'Saldo', data: r.map(x => x.balance), borderColor: cssVar('--c4'), backgroundColor: cssVar('--c4'), tension: .25, pointRadius: 3, order: 1,
+        segment: { borderDash: ctx => r[ctx.p1DataIndex]?.future ? [5, 4] : undefined } },
+    ] },
+    options: { maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { tooltip, legend: { position: 'bottom' } }, scales: scales(false) }
+  });
+}
+
+function aggregateClients(rows) {
+  return state.clients.map(c => {
+    let hours = 0, rev = 0, cost = 0, activeMonths = 0;
+    rows.forEach(r => { const x = r.clients[c.id]; if (!x) return; hours += x.hours; rev += x.rev; cost += x.cost; if (c.type === 'retainer' && x.active) activeMonths++; });
+    return { c, hours, rev, cost, margin: rev - cost, activeMonths };
+  }).filter(a => a.hours > 0 || a.rev > 0);
+}
+
+function renderClientProfit(rows, avgCostRate) {
+  const list = aggregateClients(rows).sort((a, b) => b.margin - a.margin);
+  if (!list.length) { $('#clientProfit').innerHTML = '<p class="muted">Brak danych w wybranym okresie.</p>'; return; }
+  const totalRev = list.reduce((a, x) => a + x.rev, 0);
+  const maxAbs = Math.max(...list.map(x => Math.abs(x.margin)), 1);
+  const totalCost = rows.reduce((a, r) => a + r.cost, 0);
+  const allocated = rows.reduce((a, r) => a + r.allocated, 0);
+  $('#clientProfit').innerHTML = `<table><thead><tr>
+    <th>Klient</th><th>Model</th><th class="n">Godziny</th><th class="n">Przychód</th><th class="n">Udział</th>
+    <th class="n">Efektywna stawka</th><th class="n">Koszt przypisany</th><th class="n">Marża</th><th class="n">Marża %</th><th></th></tr></thead><tbody>
+    ${list.map(x => {
+      const eff = x.hours ? x.rev / x.hours : NaN;
+      const effCls = isFinite(eff) && avgCostRate && eff < avgCostRate ? 'neg' : '';
+      return `<tr><td>${esc(x.c.name)}</td><td>${typeTag(x.c)}</td><td class="n">${hrs(x.hours)}</td><td class="n">${money(x.rev)}</td>
+      <td class="n">${pct(totalRev ? x.rev / totalRev : NaN)}</td><td class="n ${effCls}">${isFinite(eff) ? money(eff) + '/h' : '—'}</td>
+      <td class="n">${money(x.cost)}</td><td class="n ${cls(x.margin)}">${money(x.margin)}</td><td class="n ${cls(x.margin)}">${pct(x.rev ? x.margin / x.rev : NaN)}</td>
+      <td><div class="bar"><i style="width:${Math.abs(x.margin) / maxAbs * 100}%;background:var(${x.margin < 0 ? '--neg' : '--pos'})"></i></div></td></tr>`;
+    }).join('')}
+    ${Math.abs(totalCost - allocated) > 0.5 ? `<tr><td class="muted" colspan="6">Koszty nieprzypisane do klientów (miesiące bez godzin / różnica stawki wewnętrznej)</td><td class="n">${money(totalCost - allocated)}</td><td class="n ${cls(allocated - totalCost)}">${money(allocated - totalCost)}</td><td colspan="2"></td></tr>` : ''}
+    </tbody></table>`;
+}
+const typeTag = c => c.type === 'retainer' ? '<span class="tag r">ryczałt</span>' : '<span class="tag">godzinowy</span>';
+
+function refHourlyRate() {
+  const rates = state.clients.filter(c => c.type === 'hourly' && +c.rate > 0).map(c => +c.rate);
+  return rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : 0;
+}
+
+function renderRetainers(rows) {
+  const list = aggregateClients(rows).filter(x => x.c.type === 'retainer');
+  if (!list.length) { $('#retainers').innerHTML = '<p class="muted">Brak klientów ryczałtowych w wybranym okresie.</p>'; return; }
+  const ref = refHourlyRate();
+  $('#retainers').innerHTML = `<table><thead><tr><th>Klient</th><th class="n">Ryczałt / mies.</th><th class="n">Miesiące</th><th class="n">Godziny</th>
+    <th class="n">Pakiet</th><th>Wykorzystanie</th><th class="n">Efektywna stawka</th><th class="n">Wartość nadgodzin*</th></tr></thead><tbody>
+    ${list.map(x => {
+      const pack = (+x.c.includedHours || 0) * x.activeMonths;
+      const util = pack ? x.hours / pack : NaN;
+      const over = pack ? Math.max(0, x.hours - pack) : 0;
+      const col = !isFinite(util) ? '--muted' : util > 1.1 ? '--neg' : util > 0.9 ? '--warn' : '--pos';
+      return `<tr><td>${esc(x.c.name)}</td><td class="n">${money(x.c.fee)}</td><td class="n">${x.activeMonths}</td><td class="n">${hrs(x.hours)}</td>
+        <td class="n">${pack ? hrs(pack) : '—'}</td>
+        <td><div class="row" style="gap:8px;flex-wrap:nowrap"><div class="bar" style="flex:1"><i style="width:${Math.min(100, (util || 0) * 100)}%;background:var(${col})"></i></div><span style="color:var(${col})">${pct(util)}</span></div></td>
+        <td class="n">${x.hours ? money(x.rev / x.hours) + '/h' : '—'}</td>
+        <td class="n ${over ? 'neg' : 'muted'}">${over && ref ? money(over * ref) : '—'}</td></tr>`;
+    }).join('')}</tbody></table>
+    <p class="hint">* Nadgodziny ponad pakiet wycenione po średniej stawce klientów godzinowych (${ref ? money(ref) + '/h' : 'brak'}) — tyle „oddajesz” w ramach ryczałtu.</p>`;
+}
+
+function renderMonthly(model, sel) {
+  $('#monthly').innerHTML = `<table><thead><tr><th>Miesiąc</th><th class="n">Godziny</th><th class="n">Przychód</th><th class="n">Koszty</th>
+    <th class="n">Zysk</th><th class="n">Marża</th><th class="n">Koszt godziny</th><th class="n">Wpływy</th><th class="n">Wydatki</th><th class="n">Saldo</th></tr></thead><tbody>
+    ${sel.map(m => { const r = model.byMonth[m]; return `<tr class="${r.future ? 'future' : ''}"><td>${fmtMonth(m)}${r.future ? ' (prognoza)' : ''}</td>
+      <td class="n">${hrs(r.hours)}</td><td class="n">${money(r.revenue)}</td><td class="n">${money(r.cost)}</td>
+      <td class="n ${cls(r.profit)}">${money(r.profit)}</td><td class="n">${pct(r.revenue ? r.profit / r.revenue : NaN)}</td>
+      <td class="n">${r.costRate ? money(r.costRate) : '—'}</td><td class="n">${money(r.inflow)}</td><td class="n">${money(r.outflow)}</td>
+      <td class="n ${cls(r.balance)}">${money(r.balance)}</td></tr>`; }).join('')}
+    </tbody></table>`;
+}
+
+function renderInsights(model, rows, k) {
+  const out = [];
+  const add = (icon, html) => out.push(`<li><b class="i">${icon}</b><span>${html}</span></li>`);
+  const list = aggregateClients(rows);
+
+  if (k.revenue) add(k.profit >= 0 ? '✅' : '🔻', `W okresie zysk operacyjny wynosi <b>${money(k.profit)}</b> przy marży <b>${pct(k.profit / k.revenue)}</b>.`);
+  if (k.hours && k.avgCostRate) {
+    const be = k.avgCostRate;
+    add('⏱️', `Średni koszt godziny pracy to <b>${money(be)}</b> — to minimalna efektywna stawka, przy której klient nie przynosi straty.`);
+  }
+  list.filter(x => x.hours > 0 && k.avgCostRate && x.rev / x.hours < k.avgCostRate)
+      .forEach(x => add('⚠️', `<b>${esc(x.c.name)}</b>: efektywna stawka ${money(x.rev / x.hours)}/h jest niższa niż koszt godziny ${money(k.avgCostRate)} — klient obniża rentowność.`));
+  const ref = refHourlyRate();
+  list.filter(x => x.c.type === 'retainer' && +x.c.includedHours > 0 && x.activeMonths).forEach(x => {
+    const util = x.hours / (x.c.includedHours * x.activeMonths);
+    if (util > 1.1) add('📈', `<b>${esc(x.c.name)}</b> wykorzystuje <b>${pct(util)}</b> pakietu godzin. Średnio ${hrs(x.hours / x.activeMonths)}/mies. przy ryczałcie ${money(x.c.fee)}` +
+      (ref ? ` — po stawce godzinowej byłoby to ${money(x.hours / x.activeMonths * ref)}/mies. Warto renegocjować ryczałt lub rozliczać nadgodziny.` : '.'));
+    else if (util < 0.6) add('💡', `<b>${esc(x.c.name)}</b> wykorzystuje tylko ${pct(util)} pakietu — wysoka marża, ale ryzyko, że klient uzna ryczałt za zbyt drogi.`);
+  });
+  const totalRev = list.reduce((a, x) => a + x.rev, 0);
+  const top = list.slice().sort((a, b) => b.rev - a.rev)[0];
+  if (top && totalRev && top.rev / totalRev > 0.4) add('🎯', `<b>${esc(top.c.name)}</b> generuje ${pct(top.rev / totalRev)} przychodu — duże uzależnienie od jednego klienta.`);
+  const retShare = totalRev ? rows.reduce((a, r) => a + r.revRetainer, 0) / totalRev : 0;
+  if (totalRev) add('🔁', `Ryczałty dają <b>${pct(retShare)}</b> przychodu — to przewidywalna część cashflow, niezależna od liczby godzin.`);
+  if (k.recv > 0) add('🧾', `Na koniec okresu w drodze są należności <b>${money(k.recv)}</b> (faktury przed terminem płatności).`);
+  const neg = model.months.filter(m => m >= rows[0]?.m).map(m => model.byMonth[m]).find(r => r.balance < 0);
+  if (neg) add('🚨', `Saldo gotówki spada poniżej zera w <b>${fmtMonth(neg.m)}</b>${neg.future ? ' (prognoza)' : ''}: ${money(neg.balance)}.`);
+  else {
+    const fut = model.months.filter(m => m > curMonth()).map(m => model.byMonth[m]);
+    if (fut.length) add('🔮', `Prognoza: przy obecnych ryczałtach i kosztach stałych saldo za ${fut.length} mies. wyniesie <b>${money(fut[fut.length - 1].balance)}</b> (bez nowych zleceń godzinowych).`);
+  }
+  state.clients.filter(c => c.type === 'hourly' && !(+c.rate > 0)).forEach(c => add('✏️', `Klient <b>${esc(c.name)}</b> nie ma stawki godzinowej — uzupełnij ją w zakładce Klienci.`));
+  state.clients.filter(c => c.type === 'retainer' && !(+c.fee > 0)).forEach(c => add('✏️', `Klient <b>${esc(c.name)}</b> nie ma kwoty ryczałtu — uzupełnij ją w zakładce Klienci.`));
+  $('#insights').innerHTML = out.join('') || '<li class="muted">Brak wniosków dla wybranego okresu.</li>';
+}
+
+/* ===================== Godziny ===================== */
+function clientOptions(withBlank, blankLabel) {
+  return (withBlank ? `<option value="">${blankLabel}</option>` : '') +
+    state.clients.slice().sort((a, b) => a.name.localeCompare(b.name, 'pl')).map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+}
+function renderHours() {
+  const keep = (el, html) => { const v = el.value; el.innerHTML = html; if ([...el.options].some(o => o.value === v)) el.value = v; };
+  keep($('#csvClient'), clientOptions(true, '— z kolumny „klient” w pliku —'));
+  keep($('#entryForm').clientId, clientOptions(false));
+  keep($('#fClient'), clientOptions(true, 'Wszyscy'));
+  const months = [...new Set(state.entries.map(e => e.date.slice(0, 7)))].sort().reverse();
+  keep($('#fMonth'), '<option value="">Wszystkie</option>' + months.map(m => `<option value="${m}">${fmtMonth(m)}</option>`).join(''));
+
+  $('#importHistory').innerHTML = state.imports.length ? `<h2 style="margin-top:16px">Historia importów</h2><table><thead><tr><th>Plik</th><th>Data importu</th><th class="n">Wpisy</th><th></th></tr></thead><tbody>
+    ${state.imports.slice().reverse().map(i => `<tr><td>${esc(i.name)}</td><td>${new Date(i.at).toLocaleString('pl-PL')}</td><td class="n">${state.entries.filter(e => e.importId === i.id).length}</td>
+    <td><button class="link danger" onclick="undoImport('${i.id}')">Cofnij import</button></td></tr>`).join('')}</tbody></table>` : '';
+
+  const fm = $('#fMonth').value, fc = $('#fClient').value;
+  const list = state.entries.filter(e => (!fm || e.date.startsWith(fm)) && (!fc || e.clientId === fc)).sort((a, b) => b.date.localeCompare(a.date));
+  const total = list.reduce((a, e) => a + (+e.hours || 0), 0);
+  $('#entryCount').textContent = `${list.length} wpisów · ${hrs(total)}`;
+  const shown = list.slice(0, 500);
+  $('#entries').innerHTML = list.length ? `<table><thead><tr><th>Data</th><th>Klient</th><th>Osoba</th><th class="n">Godziny</th><th>Opis</th><th></th></tr></thead><tbody>
+    ${shown.map(e => `<tr><td>${e.date}</td><td>${esc(clientById(e.clientId)?.name || '?')}</td><td>${esc(e.person)}</td><td class="n">${nf1.format(e.hours)}</td>
+      <td style="white-space:normal">${esc(e.desc)}</td><td><button class="link danger" onclick="delEntry('${e.id}')">Usuń</button></td></tr>`).join('')}
+    </tbody></table>${list.length > 500 ? `<p class="hint">Pokazano 500 z ${list.length} wpisów — zawęź filtr.</p>` : ''}` : '<p class="muted">Brak wpisów.</p>';
+}
+$('#fMonth').addEventListener('change', renderHours);
+$('#fClient').addEventListener('change', renderHours);
+$('#entryForm').addEventListener('submit', ev => {
+  ev.preventDefault();
+  const f = ev.target;
+  if (!f.clientId.value) { toast('Najpierw dodaj klienta.'); return; }
+  state.entries.push({ id: uid(), date: f.date.value, clientId: f.clientId.value, person: f.person.value.trim(), hours: +f.hours.value, desc: f.desc.value.trim() });
+  f.hours.value = ''; f.desc.value = '';
+  commit(); toast('Dodano wpis.');
+});
+function delEntry(id) { state.entries = state.entries.filter(e => e.id !== id); commit(); }
+function undoImport(id) {
+  const n = state.entries.filter(e => e.importId === id).length;
+  if (!confirm(`Usunąć ${n} wpisów z tego importu?`)) return;
+  state.entries = state.entries.filter(e => e.importId !== id);
+  state.imports = state.imports.filter(i => i.id !== id);
+  commit(); toast(`Usunięto ${n} wpisów.`);
+}
+
+/* ---- CSV ---- */
+function parseCSV(text) {
+  text = text.replace(/^﻿/, '');
+  const first = text.split(/\r?\n/)[0] || '';
+  const delim = [';', '\t', ','].map(d => [d, first.split(d).length]).sort((a, b) => b[1] - a[1])[0][0];
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) {
+      if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === delim) { row.push(cell); cell = ''; }
+    else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+    else cell += ch;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(c => c.trim() !== ''));
+}
+const HEADERS = {
+  date: ['data', 'date', 'dzień', 'dzien', 'start date', 'start_date', 'day', 'data rozpoczęcia', 'data rozpoczecia'],
+  client: ['klient', 'client', 'customer', 'firma', 'kontrahent'],
+  project: ['projekt', 'project'],
+  hours: ['godziny', 'hours', 'godzin', 'h', 'czas', 'liczba godzin', 'duration (decimal)', 'time (decimal)', 'duration', 'czas trwania', 'time (h)', 'czas (h)'],
+  person: ['osoba', 'person', 'user', 'użytkownik', 'uzytkownik', 'member', 'pracownik', 'name', 'imię i nazwisko'],
+  desc: ['opis', 'description', 'task', 'zadanie', 'notes', 'uwagi'],
+};
+function mapHeaders(hdr) {
+  const norm = hdr.map(h => h.trim().toLowerCase());
+  const idx = {};
+  for (const [k, names] of Object.entries(HEADERS)) {
+    for (const n of names) { const i = norm.indexOf(n); if (i >= 0) { idx[k] = i; break; } }
+  }
+  return idx;
+}
+function parseHours(s) {
+  s = String(s || '').trim();
+  if (!s) return NaN;
+  if (s.includes(':')) { const [h, m = 0, sec = 0] = s.split(':').map(Number); return h + m / 60 + sec / 3600; }
+  return parseFloat(s.replace(/\s/g, '').replace(',', '.'));
+}
+function parseDate(s) {
+  s = String(s || '').trim().slice(0, 10);
+  let m;
+  if ((m = s.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/))) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  if ((m = s.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})/))) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return null;
+}
+function findOrCreateClient(name, created) {
+  const n = name.trim();
+  let c = state.clients.find(x => x.name.trim().toLowerCase() === n.toLowerCase());
+  if (!c) { c = { id: uid(), name: n, type: 'hourly', rate: 0, paymentDays: 14 }; state.clients.push(c); created.push(n); }
+  return c;
+}
+function importCSV() {
+  const file = $('#csvFile').files[0];
+  if (!file) { toast('Wybierz plik CSV.'); return; }
+  const forced = $('#csvClient').value;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const rows = parseCSV(reader.result);
+    if (rows.length < 2) { toast('Plik nie zawiera danych.'); return; }
+    const idx = mapHeaders(rows[0]);
+    if (idx.client == null) idx.client = idx.project;
+    if (idx.date == null || idx.hours == null) { toast('Nie znaleziono kolumn „data” i „godziny”. Sprawdź nagłówki.'); return; }
+    if (idx.client == null && !forced) { toast('Brak kolumny „klient” — wybierz klienta z listy przed importem.'); return; }
+    const imp = { id: uid(), name: file.name, at: Date.now() };
+    const created = []; let ok = 0, bad = 0;
+    rows.slice(1).forEach(r => {
+      const date = parseDate(r[idx.date]); const h = parseHours(r[idx.hours]);
+      const cname = forced ? null : (r[idx.client] || '').trim();
+      if (!date || !isFinite(h) || h <= 0 || (!forced && !cname)) { bad++; return; }
+      const clientId = forced || findOrCreateClient(cname, created).id;
+      state.entries.push({ id: uid(), date, clientId, hours: Math.round(h * 100) / 100,
+        person: idx.person != null ? (r[idx.person] || '').trim() : '', desc: idx.desc != null ? (r[idx.desc] || '').trim() : '', importId: imp.id });
+      ok++;
+    });
+    if (ok) state.imports.push(imp);
+    $('#csvFile').value = '';
+    commit();
+    toast(`Zaimportowano ${ok} wpisów${bad ? `, pominięto ${bad} błędnych wierszy` : ''}${created.length ? `. Nowi klienci: ${created.join(', ')} — uzupełnij stawki.` : '.'}`);
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
+/* ===================== Klienci ===================== */
+const clientForm = $('#clientForm');
+function toggleClientFields() {
+  const r = clientForm.type.value === 'retainer';
+  clientForm.querySelectorAll('.f-retainer').forEach(e => e.classList.toggle('hidden', !r));
+  clientForm.querySelectorAll('.f-hourly').forEach(e => e.classList.toggle('hidden', r));
+}
+clientForm.type.addEventListener('change', toggleClientFields);
+function resetClientForm() { clientForm.reset(); clientForm.id.value = ''; $('#clientFormTitle').textContent = 'Dodaj klienta'; toggleClientFields(); }
+clientForm.addEventListener('submit', ev => {
+  ev.preventDefault();
+  const f = clientForm;
+  const data = { name: f.name.value.trim(), type: f.type.value, rate: +f.rate.value || 0, fee: +f.fee.value || 0,
+    includedHours: +f.includedHours.value || 0, paymentDays: +f.paymentDays.value || 0,
+    startMonth: f.startMonth.value || (f.type.value === 'retainer' ? curMonth() : ''), endMonth: f.endMonth.value };
+  if (f.id.value) Object.assign(clientById(f.id.value), data);
+  else state.clients.push({ id: uid(), ...data });
+  resetClientForm(); commit(); toast('Zapisano klienta.');
+});
+function editClient(id) {
+  const c = clientById(id), f = clientForm;
+  ['id', 'name', 'type', 'rate', 'fee', 'includedHours', 'paymentDays', 'startMonth', 'endMonth'].forEach(k => f[k].value = c[k] ?? '');
+  $('#clientFormTitle').textContent = 'Edytuj klienta'; toggleClientFields(); f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function delClient(id) {
+  const n = state.entries.filter(e => e.clientId === id).length;
+  if (!confirm(`Usunąć klienta${n ? ` i ${n} jego wpisów czasu pracy` : ''}?`)) return;
+  state.clients = state.clients.filter(c => c.id !== id);
+  state.entries = state.entries.filter(e => e.clientId !== id);
+  commit();
+}
+function renderClients() {
+  const hoursBy = {}; state.entries.forEach(e => hoursBy[e.clientId] = (hoursBy[e.clientId] || 0) + (+e.hours || 0));
+  $('#clients').innerHTML = state.clients.length ? `<table><thead><tr><th>Nazwa</th><th>Model</th><th class="n">Stawka / ryczałt</th><th class="n">Pakiet h</th>
+    <th>Okres ryczałtu</th><th class="n">Płatność</th><th class="n">Godziny łącznie</th><th></th></tr></thead><tbody>
+    ${state.clients.slice().sort((a, b) => a.name.localeCompare(b.name, 'pl')).map(c => `<tr><td>${esc(c.name)}</td><td>${typeTag(c)}</td>
+      <td class="n ${(c.type === 'hourly' ? +c.rate : +c.fee) > 0 ? '' : 'warn'}">${c.type === 'hourly' ? money(c.rate) + '/h' : money(c.fee) + '/mies.'}</td>
+      <td class="n">${c.type === 'retainer' && c.includedHours ? c.includedHours : '—'}</td>
+      <td>${c.type === 'retainer' ? `${c.startMonth ? fmtMonth(c.startMonth) : '…'} – ${c.endMonth ? fmtMonth(c.endMonth) : 'bezterminowo'}` : '—'}</td>
+      <td class="n">${c.paymentDays || 0} dni</td><td class="n">${hrs(hoursBy[c.id])}</td>
+      <td><button class="link" onclick="editClient('${c.id}')">Edytuj</button><button class="link danger" onclick="delClient('${c.id}')">Usuń</button></td></tr>`).join('')}
+    </tbody></table>` : '<p class="muted">Brak klientów.</p>';
+}
+
+/* ===================== Koszty ===================== */
+const costForm = $('#costForm');
+function toggleCostFields() {
+  const once = costForm.type.value === 'once';
+  costForm.querySelectorAll('.f-once').forEach(e => e.classList.toggle('hidden', !once));
+  costForm.querySelectorAll('.f-rec').forEach(e => e.classList.toggle('hidden', once));
+}
+costForm.type.addEventListener('change', toggleCostFields);
+function resetCostForm() { costForm.reset(); costForm.id.value = ''; $('#costFormTitle').textContent = 'Dodaj koszt'; toggleCostFields(); }
+costForm.addEventListener('submit', ev => {
+  ev.preventDefault();
+  const f = costForm;
+  const data = { name: f.name.value.trim(), category: f.category.value, type: f.type.value, amount: +f.amount.value || 0,
+    startMonth: f.startMonth.value, endMonth: f.endMonth.value, month: f.month.value || curMonth() };
+  if (data.type === 'recurring' && !data.startMonth) data.startMonth = dataBounds()?.min || curMonth();
+  if (f.id.value) Object.assign(state.costs.find(k => k.id === f.id.value), data);
+  else state.costs.push({ id: uid(), ...data });
+  resetCostForm(); commit(); toast('Zapisano koszt.');
+});
+function editCost(id) {
+  const k = state.costs.find(x => x.id === id), f = costForm;
+  ['id', 'name', 'category', 'type', 'amount', 'startMonth', 'endMonth', 'month'].forEach(n => f[n].value = k[n] ?? '');
+  $('#costFormTitle').textContent = 'Edytuj koszt'; toggleCostFields(); f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function delCost(id) { if (!confirm('Usunąć koszt?')) return; state.costs = state.costs.filter(k => k.id !== id); commit(); }
+function renderCosts() {
+  const m = curMonth();
+  const monthly = state.costs.reduce((a, k) => a + (k.type === 'recurring' ? costInMonth(k, m) : 0), 0);
+  $('#costSum').textContent = `koszty stałe w bieżącym miesiącu: ${money(monthly)}`;
+  $('#costs').innerHTML = state.costs.length ? `<table><thead><tr><th>Nazwa</th><th>Kategoria</th><th>Rodzaj</th><th class="n">Kwota</th><th>Okres</th><th></th></tr></thead><tbody>
+    ${state.costs.slice().sort((a, b) => (a.type + a.category).localeCompare(b.type + b.category, 'pl')).map(k => `<tr><td>${esc(k.name)}</td><td>${esc(k.category)}</td>
+      <td>${k.type === 'once' ? 'jednorazowy' : 'stały'}</td><td class="n">${money(k.amount)}${k.type === 'once' ? '' : '/mies.'}</td>
+      <td>${k.type === 'once' ? fmtMonth(k.month) : `${k.startMonth ? fmtMonth(k.startMonth) : '…'} – ${k.endMonth ? fmtMonth(k.endMonth) : 'bezterminowo'}`}</td>
+      <td><button class="link" onclick="editCost('${k.id}')">Edytuj</button><button class="link danger" onclick="delCost('${k.id}')">Usuń</button></td></tr>`).join('')}
+    </tbody></table>` : '<p class="muted">Brak kosztów.</p>';
+}
+
+/* ===================== Ustawienia i dane ===================== */
+const settingsForm = $('#settingsForm');
+function renderSettings() {
+  const s = state.settings;
+  Object.keys(s).forEach(k => { if (settingsForm[k]) settingsForm[k].value = s[k] ?? ''; });
+}
+settingsForm.addEventListener('submit', ev => {
+  ev.preventDefault();
+  const f = settingsForm;
+  state.settings = { openingBalance: +f.openingBalance.value || 0, openingMonth: f.openingMonth.value, costMode: f.costMode.value,
+    manualCostRate: +f.manualCostRate.value || 0, taxRate: +f.taxRate.value || 0 };
+  commit(); toast('Zapisano ustawienia.');
+});
+function exportJSON() {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }));
+  a.download = `dashboard-finansowy-${new Date().toISOString().slice(0, 10)}.json`; a.click();
+}
+function importJSON(input) {
+  const file = input.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const s = JSON.parse(r.result);
+      if (!Array.isArray(s.clients) || !Array.isArray(s.entries)) throw 0;
+      if (!confirm('Zastąpić obecne dane danymi z pliku?')) return;
+      const d = defaultState(); state = { ...d, ...s, settings: { ...d.settings, ...(s.settings || {}) } };
+      resetPeriod(); commit(); toast('Wczytano kopię danych.');
+    } catch (e) { toast('Nieprawidłowy plik kopii.'); }
+    input.value = '';
+  };
+  r.readAsText(file);
+}
+function clearAll() { if (!confirm('Na pewno usunąć wszystkie dane? Tej operacji nie da się cofnąć.')) return; state = defaultState(); resetPeriod(); commit(); }
+function resetPeriod() { $('#pFrom').value = ''; $('#pTo').value = ''; }
+
+function loadDemo() {
+  if ((state.clients.length || state.entries.length) && !confirm('Dane demo zastąpią obecne dane. Kontynuować?')) return;
+  let seed = 42; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const now = curMonth(), start = addMonths(now, -5);
+  const C = (name, type, o) => ({ id: uid(), name, type, paymentDays: 14, ...o });
+  const clients = [
+    C('Alfa Sp. z o.o.', 'hourly', { rate: 180, paymentDays: 30 }),
+    C('Beta Studio', 'hourly', { rate: 150 }),
+    C('Epsilon Consulting', 'hourly', { rate: 200, paymentDays: 45 }),
+    C('Gamma Tech', 'retainer', { fee: 12000, includedHours: 70, startMonth: start }),
+    C('Delta Retail', 'retainer', { fee: 8000, includedHours: 40, startMonth: start, paymentDays: 30 }),
+  ];
+  const plan = [[0, 50, start], [1, 30, start], [2, 22, addMonths(now, -3)], [3, 64, start], [4, 56, start]];
+  const people = ['Anna', 'Piotr', 'Kasia'];
+  const tasks = ['Konsultacje', 'Implementacja', 'Spotkanie statusowe', 'Analiza', 'Poprawki', 'Wsparcie bieżące', 'Raport'];
+  const entries = [];
+  const today = new Date().toISOString().slice(0, 10);
+  monthRange(start, now).forEach(m => {
+    const [y, mo] = m.split('-').map(Number);
+    const days = []; for (let d = 1; d <= new Date(y, mo, 0).getDate(); d++) {
+      const dt = new Date(y, mo - 1, d); const iso = `${m}-${String(d).padStart(2, '0')}`;
+      if (dt.getDay() % 6 !== 0 && iso <= today) days.push(iso);
+    }
+    if (!days.length) return;
+    plan.forEach(([ci, target, from]) => {
+      if (m < from) return;
+      let left = target * (0.8 + rnd() * 0.4) * (m === now ? days.length / 21 : 1);
+      while (left > 0.5) {
+        const h = Math.min(left, Math.round((1 + rnd() * 5) * 4) / 4);
+        entries.push({ id: uid(), date: days[Math.floor(rnd() * days.length)], clientId: clients[ci].id, person: people[Math.floor(rnd() * 3)],
+          hours: h, desc: tasks[Math.floor(rnd() * tasks.length)] });
+        left -= h;
+      }
+    });
+  });
+  const K = (name, category, amount, o = {}) => ({ id: uid(), name, category, amount, type: 'recurring', startMonth: start, endMonth: '', month: '', ...o });
+  state = { ...defaultState(), clients, entries, costs: [
+    K('Wynagrodzenia zespołu', 'Wynagrodzenia', 22000), K('ZUS', 'ZUS i podatki', 1800), K('Biuro coworking', 'Biuro', 2500),
+    K('Licencje (Figma, Jira, M365)', 'Oprogramowanie', 950), K('Biuro rachunkowe', 'Księgowość', 600), K('Kampania LinkedIn', 'Marketing', 1200, { endMonth: addMonths(start, 2) }),
+    K('Laptop dla Kasi', 'Sprzęt', 7500, { type: 'once', month: addMonths(now, -3), startMonth: '' }),
+  ], settings: { ...defaultState().settings, openingBalance: 30000, openingMonth: start, taxRate: 19 } };
+  resetPeriod(); commit(); showTab('dash'); toast('Wczytano dane demo.');
+}
+
+/* ===================== Nawigacja ===================== */
+function showTab(t) {
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+  document.querySelectorAll('main > section').forEach(s => s.classList.toggle('hidden', s.id !== 'tab-' + t));
+  $('#periodBox').classList.toggle('hidden', t !== 'dash');
+  if (t === 'dash') renderDash();
+  try { localStorage.setItem(LS_KEY + '-tab', t); } catch (e) {}
+}
+$('#nav').addEventListener('click', e => { if (e.target.dataset.tab) showTab(e.target.dataset.tab); });
+function renderAll() { renderHours(); renderClients(); renderCosts(); renderSettings(); if (!$('#tab-dash').classList.contains('hidden')) renderDash(); }
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (!$('#tab-dash').classList.contains('hidden')) renderDash(); });
+
+$('#entryForm').date.value = new Date().toISOString().slice(0, 10);
+toggleClientFields(); toggleCostFields();
+renderAll();
+let startTab = 'dash'; try { startTab = localStorage.getItem(LS_KEY + '-tab') || 'dash'; } catch (e) {}
+showTab(startTab);
+</script>
+</body>
+</html>
