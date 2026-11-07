@@ -228,8 +228,8 @@ code{background:var(--bg);padding:1px 5px;border-radius:4px}
       <button class="btn" onclick="loadDemo()">Wczytaj dane demo</button>
       <button class="btn danger" onclick="clearAll()">Usuń wszystkie dane</button>
     </div>
-    <p class="hint">„Wczytaj z bazy agenta CFO” pobiera <code>dane/wyniki/dashboard.json</code> (działa, gdy strona jest serwowana, np. <code>python -m http.server</code>);
-      przy otwarciu z dysku użyj „Importuj kopię (JSON)” i wskaż ten plik. Miesiące z wyciągami bankowymi pokazują faktyczne wpływy, wydatki i saldo.</p>
+    <p class="hint">„Wczytaj z bazy agenta CFO” pobiera <code>dane/wyniki/dashboard.json</code> — najprościej uruchom <code>python -m cfo dashboard</code> (lub <code>odswiez.bat</code>), wtedy dane wczytają się same;
+      przy otwarciu pliku z dysku użyj „Importuj kopię (JSON)” i wskaż <code>CFO/wyniki/dashboard.json</code>. Miesiące z wyciągami bankowymi pokazują faktyczne wpływy, wydatki i saldo.</p>
     <p class="hint">Dane zapisują się wyłącznie w tej przeglądarce (localStorage). Rób regularnie eksport kopii, żeby ich nie stracić.</p>
   </div>
 </section>
@@ -818,7 +818,7 @@ async function loadFromAgent() {
     const s = await res.json();
     const d = defaultState(); state = { ...d, ...s, settings: { ...d.settings, ...(s.settings || {}) } };
     resetPeriod(); commit(); showTab('dash'); toast(`Wczytano dane agenta CFO (do ${s.generatedFor || '?'}).`);
-  } catch (e) { toast('Nie znaleziono dane/wyniki/dashboard.json — uruchom „python -m cfo przetworz” i otwórz stronę przez serwer.'); }
+  } catch (e) { toast('Brak danych agenta — uruchom „python -m cfo przetworz”, a potem „python -m cfo dashboard”.'); }
 }
 function clearAll() { if (!confirm('Na pewno usunąć wszystkie dane? Tej operacji nie da się cofnąć.')) return; state = defaultState(); resetPeriod(); commit(); }
 function resetPeriod() { $('#pFrom').value = ''; $('#pTo').value = ''; }
@@ -884,6 +884,7 @@ toggleClientFields(); toggleCostFields();
 renderAll();
 let startTab = 'dash'; try { startTab = localStorage.getItem(LS_KEY + '-tab') || 'dash'; } catch (e) {}
 showTab(startTab);
+if (new URLSearchParams(location.search).has('baza')) loadFromAgent();  // start przez: python -m cfo dashboard
 </script>
 </body>
 </html>

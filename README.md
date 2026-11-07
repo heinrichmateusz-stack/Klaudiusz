@@ -8,19 +8,16 @@ Dwie części:
    Agent (Claude) postępuje wg [`CLAUDE.md`](CLAUDE.md) i dopisuje komentarz CFO z decyzjami do podjęcia.
 
 ## Szybki start
+Pełna instrukcja dla właściciela, asystentki i księgowej: **[INSTRUKCJA.md](INSTRUKCJA.md)**.
 ```bash
 pip install -r requirements.txt
-python -m cfo init          # tworzy dane/ i dane/konfiguracja.json (uzupełnij klientów i zespół)
-# wrzuć pliki:
-#   dane/wejscie/bank/              wyciągi CSV/XLSX (najlepiej) albo PDF
-#   dane/wejscie/czas-pracy/        Clockify: Reports → Detailed → Export CSV/Excel
-#   dane/wejscie/koszty-zespolu/    Excel z księgowości: osoba + całkowity koszt (+ miesiąc lub miesiąc w nazwie pliku)
-python -m cfo przetworz     # → dane/raporty/RRRR-MM-raport-cfo.md, dane/wyniki/dashboard.json
+python -m cfo ustaw-folder "G:\Mój dysk\CFO"   # folder z danymi na Dysku Google (poza repozytorium)
+python -m cfo zabezpiecz                         # blokada commitowania danych finansowych
+# uzupełnij CFO/klienci.xlsx i wrzucaj pliki do CFO/wejscie/{bank,czas-pracy,koszty-zespolu}
+python -m cfo przetworz                          # → CFO/raporty/RRRR-MM-raport-cfo.md, CFO/wyniki/dashboard.json
+python -m cfo dashboard                          # dashboard z danymi, tylko na tym komputerze
 ```
-Podgląd na fikcyjnych danych: `CFO_DANE=dane-demo python -m cfo demo && CFO_DANE=dane-demo python -m cfo przetworz`.
-
-Dashboard z danymi agenta: `python -m http.server` w katalogu repo → `http://localhost:8000` → Ustawienia →
-„Wczytaj z bazy agenta CFO” (albo „Importuj kopię (JSON)” i wskaż `dane/wyniki/dashboard.json`).
+Albo dwuklik `odswiez.bat` (Windows) / `odswiez.command` (Mac). Dane testowe: `CFO_DANE=/tmp/cfo-demo python -m cfo demo`.
 
 ## Co liczy
 - **Wynik (netto, memoriałowo)**: godzinowi = godziny rozliczalne × stawka, ryczałtowi = kwota w miesiącach umowy;
@@ -38,5 +35,7 @@ Jeśli się nie zgadza, raport to oznacza, a agent odczytuje PDF i zapisuje obok
 Najpewniej działa eksport CSV z bankowości — jeśli bank go oferuje, wybierz go.
 
 ## Poufność
-`dane/` jest w `.gitignore`, bo repozytorium jest publiczne. Żeby agent miał dostęp do danych co miesiąc,
-zmień repo na prywatne (albo trzymaj dane w osobnym prywatnym repo i ustaw `CFO_DANE`) i usuń `dane/` z `.gitignore`.
+- Dane (wyciągi, godziny, koszty zespołu, raporty) leżą w folderze na Dysku Google, **poza repozytorium**. Git ich nie widzi.
+- `cfo/straznik.py` blokuje commit i push plików CSV/Excel/PDF/baz, raportów i tekstów z numerami rachunków
+  (hook `.githooks/pre-commit` + workflow `.github/workflows/blokada-danych.yml`). Fikcyjne przykłady trzymaj w `przyklady/`.
+- Baza `finanse.db` jest lokalna (`~/.cfo/`), odtwarzalna z plików.

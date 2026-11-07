@@ -1,12 +1,11 @@
-"""Baza SQLite, konfiguracja i wczytywanie plików z folderu dane/wejscie."""
+"""Folder danych, baza SQLite (lokalna), konfiguracja (klienci.xlsx / konfiguracja.json) i wczytywanie plików."""
 import hashlib
 import json
 import os
-import shutil
 import sqlite3
 from pathlib import Path
 
-from . import parsers
+from . import arkusz, parsers
 from .util import norm
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -24,8 +23,36 @@ CREATE TABLE IF NOT EXISTS koszty_zespolu (id INTEGER PRIMARY KEY, miesiac TEXT,
 """
 
 
+USTAWIENIE = ROOT / ".cfo-dane"  # lokalny plik (poza gitem) ze ścieżką do folderu danych
+
+
 def katalog_danych() -> Path:
-    return Path(os.environ.get("CFO_DANE", ROOT / "dane")).resolve()
+    """Kolejność: zmienna CFO_DANE, plik .cfo-dane (python -m cfo ustaw-folder), ./dane."""
+    if os.environ.get("CFO_DANE"):
+        return Path(os.environ["CFO_DANE"]).expanduser().resolve()
+    if USTAWIENIE.exists():
+        sciezka = USTAWIENIE.read_text(encoding="utf-8").strip()
+        if sciezka:
+            return Path(sciezka).expanduser().resolve()
+    return (ROOT / "dane").resolve()
+
+
+def czy_w_repozytorium(d: Path) -> bool:
+    try:
+        d.resolve().relative_to(ROOT)
+        return True
+    except ValueError:
+        return False
+
+
+def sciezka_bazy(d: Path) -> Path:
+    """Baza jest odtwarzalna z plików, więc trzymamy ją lokalnie (nie na Drive) — bez konfliktów synchronizacji."""
+    if os.environ.get("CFO_BAZA"):
+        return Path(os.environ["CFO_BAZA"])
+    klucz = hashlib.sha1(str(d).encode()).hexdigest()[:12]
+    p = Path.home() / ".cfo" / klucz
+    p.mkdir(parents=True, exist_ok=True)
+    return p / "finanse.db"
 
 
 def przygotuj_katalog(d: Path):
@@ -33,13 +60,25 @@ def przygotuj_katalog(d: Path):
         (d / "wejscie" / f).mkdir(parents=True, exist_ok=True)
     for f in ("wyniki", "raporty"):
         (d / f).mkdir(parents=True, exist_ok=True)
-    cfg = d / "konfiguracja.json"
-    if not cfg.exists():
-        shutil.copy(Path(__file__).parent / "konfiguracja.przyklad.json", cfg)
+    if not (d / arkusz.PLIK).exists() and not (d / "konfiguracja.json").exists():
+        cfg = json.loads((Path(__file__).parent / "konfiguracja.przyklad.json").read_text(encoding="utf-8"))
+        arkusz.utworz_szablon(d / arkusz.PLIK, {**cfg, "klienci": [], "zespol": []})
 
 
 def wczytaj_konfiguracje(d: Path) -> dict:
-    cfg = json.loads((d / "konfiguracja.json").read_text(encoding="utf-8"))
+    """Bazą jest konfiguracja.json (jeśli istnieje) albo wzór; klienci.xlsx nadpisuje sekcje, które zawiera."""
+    zrodlo = d / "konfiguracja.json"
+    if not zrodlo.exists():
+        zrodlo = Path(__file__).parent / "konfiguracja.przyklad.json"
+    cfg = json.loads(zrodlo.read_text(encoding="utf-8"))
+    if zrodlo.name == "konfiguracja.przyklad.json":
+        cfg["klienci"], cfg["zespol"] = [], []
+    xlsx = d / arkusz.PLIK
+    if xlsx.exists():
+        z_arkusza = arkusz.wczytaj(xlsx)
+        firma = {**cfg.get("firma", {}), **z_arkusza.pop("firma", {})}
+        cfg.update(z_arkusza)
+        cfg["firma"] = firma
     cfg.setdefault("firma", {})
     cfg.setdefault("klienci", [])
     cfg.setdefault("zespol", [])
@@ -49,7 +88,7 @@ def wczytaj_konfiguracje(d: Path) -> dict:
 
 
 def polacz(d: Path):
-    con = sqlite3.connect(d / "finanse.db")
+    con = sqlite3.connect(sciezka_bazy(d))
     con.row_factory = sqlite3.Row
     con.executescript(SCHEMA)
     return con

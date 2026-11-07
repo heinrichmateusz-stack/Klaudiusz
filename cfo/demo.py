@@ -28,7 +28,8 @@ def generuj(d: Path):
     cfg["klienci"] = [dict(k, od=start) if k["model"] == "ryczalt" else k for k in KLIENCI]
     cfg["zespol"] = [{"osoba": o, "aliasy": [a]} for o, a, _, _ in ZESPOL]
     cfg["firma"]["saldo_startowe"] = 60000
-    (d / "konfiguracja.json").write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
+    from .arkusz import PLIK, utworz_szablon
+    utworz_szablon(d / PLIK, cfg)  # konfiguracja demo w arkuszu, tak jak w prawdziwym użyciu
 
     # ---- Clockify: godziny
     wpisy, przychod = [], {m: {} for m in miesiace}

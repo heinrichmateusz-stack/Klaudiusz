@@ -5,3 +5,13 @@ dane-demo/
 __pycache__/
 *.pyc
 node_modules/
+# lokalne ustawienie ścieżki do folderu z danymi (Google Drive)
+.cfo-dane
+# wszystkie arkusze, wyciągi i bazy poza fikcyjnymi przykładami
+*.csv
+*.xlsx
+*.xls
+*.xlsm
+*.pdf
+*.db
+!przyklady/**

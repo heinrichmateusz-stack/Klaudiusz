@@ -1,0 +1,8 @@
+#!/bin/sh
+# Blokuje commit plików z danymi finansowymi (włączanie: python -m cfo zabezpiecz)
+PY=$(command -v python3 || command -v python || command -v py)
+if [ -z "$PY" ]; then
+  echo "⛔ Nie znaleziono Pythona — nie mogę sprawdzić, czy commit nie zawiera danych finansowych."
+  exit 1
+fi
+exec "$PY" -m cfo.straznik --staged

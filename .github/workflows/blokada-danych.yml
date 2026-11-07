@@ -1,0 +1,16 @@
+name: Blokada danych finansowych
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  sprawdz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Sprawdź, czy w repozytorium nie ma wyciągów, arkuszy ani numerów rachunków
+        run: python -m cfo.straznik --wszystkie
